@@ -58,6 +58,9 @@ Includes:
 "http://wokwi.com/projects/455444935811571713?utm_source=chatgpt.com"
 
 
+https://github.com/user-attachments/assets/47522724-3b54-4d9f-bbba-923e7b79107a
+
+
 ***System Architecture:***
 
 IoT Sensors (MPU6050 + DHT11)
