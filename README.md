@@ -1,4 +1,4 @@
-EV Highway Energy Consumption Prediction Dashboard 🚗⚡
+*****EV Highway Energy Consumption Prediction Dashboard 🚗⚡*****
 
 An intelligent EV Highway Energy Consumption Prediction System built using HTML, CSS, JavaScript, ESP32 IoT simulation, and ML-inspired analytics to estimate electric vehicle battery usage, charging requirements, and highway driving efficiency in real time.
 
@@ -30,9 +30,9 @@ Chart.js
 5. SOC efficiency modeling
 
 ***Outputs:***
-Prediction confidence interval
-Efficiency metrics
-Feature contribution analysis
+1. Prediction confidence interval
+2. Efficiency metrics
+3. Feature contribution analysis
 
 ***Interactive Dashboard***
 Includes:
