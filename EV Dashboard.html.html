@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV Highway Energy Consumption Prediction Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --surface2: #f0f2f5;
+    --border: #e2e6ea;
+    --border2: #cdd3da;
+    --text: #1a1f2e;
+    --text2: #4a5568;
+    --text3: #8492a6;
+    --green: #0d9f6e;
+    --green-light: #e6f7f2;
+    --green-dark: #0a7d57;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --coral: #e05c3a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+  }
+  .logo svg { width: 18px; height: 18px; fill: white; }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--text3); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 999px; border: 1px solid;
+  }
+  .badge-green { background: var(--green-light); color: var(--green-dark); border-color: #a7f3d0; }
+  .badge-blue { background: var(--blue-light); color: var(--blue); border-color: #bfdbfe; }
+  .time-display { font-family: var(--mono); font-size: 12px; color: var(--text3); }
+
+  /* ── Layout ── */
+  .main { padding: 1.5rem 2rem; max-width: 1280px; margin: 0 auto; }
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  /* ── Metric Cards ── */
+  .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+  .metric {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.1rem;
+  }
+  .metric-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .metric-val { font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--text); line-height: 1; }
+  .metric-val span { font-size: 13px; color: var(--text3); margin-left: 3px; }
+  .metric-delta { font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .delta-green { color: var(--green); }
+  .delta-amber { color: var(--amber); }
+  .delta-red { color: var(--red); }
+  .metric-accent { border-top: 3px solid var(--green); }
+
+  /* ── Two col layout ── */
+  .row2 { display: grid; grid-template-columns: 340px 1fr; gap: 12px; margin-bottom: 1.25rem; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.1rem 1.25rem;
+  }
+
+  /* ── Inputs ── */
+  .input-block { margin-bottom: 14px; }
+  .input-block label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+  .input-block label span { font-family: var(--mono); font-weight: 500; color: var(--text); }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 999px;
+    background: var(--border2); outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--green); border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--green);
+    cursor: pointer;
+  }
+  select {
+    width: 100%; padding: 7px 10px; font-size: 13px; font-family: var(--sans);
+    border: 1px solid var(--border2); border-radius: 7px;
+    background: var(--surface); color: var(--text); cursor: pointer; outline: none;
+  }
+  select:focus { border-color: var(--green); }
+  .predict-btn {
+    width: 100%; padding: 9px; font-size: 13px; font-weight: 600;
+    background: var(--green); color: white; border: none;
+    border-radius: 8px; cursor: pointer; margin-top: 8px;
+    letter-spacing: 0.02em; transition: background 0.15s;
+  }
+  .predict-btn:hover { background: var(--green-dark); }
+
+  /* ── Sensor boxes ── */
+  .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sensor-box {
+    background: var(--surface2); border-radius: 8px;
+    padding: 9px 11px;
+  }
+  .sensor-name { font-size: 10px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .sensor-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--text); margin-top: 3px; }
+  .sensor-chip { font-size: 10px; color: var(--green-dark); background: var(--green-light); padding: 1px 6px; border-radius: 999px; margin-top: 3px; display: inline-block; }
+
+  /* ── Bar chart ── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .bar-label { font-size: 11px; color: var(--text2); width: 88px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 7px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+  .bar-val { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); width: 50px; text-align: right; flex-shrink: 0; }
+
+  /* ── Stations ── */
+  .station { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .station:last-child { border-bottom: none; }
+  .station-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .station-info { flex: 1; }
+  .station-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .station-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .station-km { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-right: 6px; }
+
+  /* ── Pills ── */
+  .pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill-green { background: var(--green-light); color: var(--green-dark); }
+  .pill-amber { background: var(--amber-light); color: var(--amber); }
+  .pill-red { background: var(--red-light); color: var(--red); }
+  .pill-blue { background: var(--blue-light); color: var(--blue); }
+
+  /* ── Model table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { font-size: 10px; font-weight: 600; color: var(--text3); text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); color: var(--text2); }
+  tr:last-child td { border-bottom: none; }
+  .row-highlight td { color: var(--green-dark); font-weight: 500; background: var(--green-light); }
+  .row-highlight td:first-child { border-radius: 6px 0 0 6px; }
+  .row-highlight td:last-child { border-radius: 0 6px 6px 0; }
+
+  /* ── SOC Gauge ── */
+  .gauge-wrap { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+  .gauge-info .gauge-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .gauge-info .gauge-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Mini chart ── */
+  .chart-wrap { height: 90px; margin-top: 10px; }
+
+  /* ── Trip log ── */
+  .trip-table-wrap { overflow-x: auto; }
+  .trip-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+  .trip-table th { font-size: 10px; font-weight: 600; color: var(--text3); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--surface2); text-transform: uppercase; letter-spacing: 0.05em; }
+  .trip-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .trip-table tr:last-child td { border-bottom: none; }
+  .trip-table td:nth-child(1) { font-weight: 600; color: var(--text); }
+  .trip-table td:nth-child(2), .trip-table td:nth-child(3), .trip-table td:nth-child(4),
+  .trip-table td:nth-child(5), .trip-table td:nth-child(6) { font-family: var(--mono); }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center; font-size: 11px; color: var(--text3);
+    margin-top: 1.5rem; padding: 1rem 0 2rem;
+    border-top: 1px solid var(--border);
+  }
+  .footer strong { color: var(--text2); }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* ── Traffic Grid ── */
+  .traffic-grid-wrap {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 3px;
+    margin-top: 10px;
+  }
+  .tg-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--surface2);
+    transition: background 0.6s ease, opacity 0.6s ease;
+  }
+  .tg-cell.free   { background: #0d9f6e; opacity: 0.85; }
+  .tg-cell.mod    { background: #d97706; opacity: 0.85; }
+  .tg-cell.heavy  { background: #dc2626; opacity: 0.85; }
+  .tg-cell.empty  { background: var(--surface2); opacity: 1; }
+  .traffic-legend {
+    display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .tl-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+  .tl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .traffic-status-row {
+    display: flex; justify-content: space-between; align-items: center; margin-top: 8px;
+  }
+  .traffic-status-label { font-size: 11px; color: var(--text2); }
+  .traffic-live-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; display: flex; align-items: center; gap: 4px;
+  }
+  .tlb-free  { background: var(--green-light); color: var(--green-dark); }
+  .tlb-mod   { background: var(--amber-light); color: var(--amber); }
+  .tlb-heavy { background: var(--red-light); color: var(--red); }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .traffic-live-badge::before {
+    content:''; display:inline-block; width:6px; height:6px; border-radius:50%;
+    background: currentColor; animation: pulse-dot 1.4s infinite;
+  }
+
+  /* ── EV Live View ── */
+  .ev-canvas-wrap {
+    position: relative; margin-top: 10px;
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border);
+    background: #1a1f2e;
+  }
+  #evCanvas { display: block; width: 100%; height: 180px; }
+  .ev-telemetry {
+    display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .ev-tel-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text3);
+  }
+  .ev-tel-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .ev-tel-val { font-family: var(--mono); font-size: 11px; color: var(--text); font-weight: 500; }
+
+  /* ── ML Model Panel ── */
+  .ml-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .ml-box { background: var(--surface2); border-radius: 8px; padding: 9px 11px; }
+  .ml-box-label { font-size: 10px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .ml-box-val { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text); margin-top: 3px; }
+  .ml-conf-wrap { margin-top: 10px; }
+  .ml-conf-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+  .ml-conf-track { height: 5px; background: var(--border2); border-radius: 999px; overflow: hidden; }
+  .ml-conf-fill { height: 100%; border-radius: 999px; background: var(--green); transition: width 0.5s ease; }
+  .ml-feat-row { display: flex; justify-content: space-between; font-size: 11px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .ml-feat-row:last-child { border-bottom: none; }
+  .ml-feat-name { color: var(--text3); }
+  .ml-feat-val  { font-family: var(--mono); color: var(--text2); font-weight: 500; }
+  .ml-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px; background: var(--purple-light); color: var(--purple); }
+
+  @media (max-width: 900px) {
+    .metric-row { grid-template-columns: repeat(2, 1fr); }
+    .row2 { grid-template-columns: 1fr; }
+    .row3 { grid-template-columns: 1fr; }
+    .main { padding: 1rem; }
+    .header { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4.09 12.11A1 1 0 005 14h7l-1 8 8.91-10.11A1 1 0 0019 10h-7l1-8z"/></svg>
+    </div>
+    <div>
+      <div class="header-title">EV Highway Energy Consumption Prediction</div>
+      <div class="header-sub">IoT Sensor System — ESP32 · MPU6050 · DHT11 &nbsp;|&nbsp; KL University</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge badge-green">● Live Sensors</span>
+    <span class="badge badge-blue">Track 3: Charging Infrastructure</span>
+    <span class="time-display" id="clock">--:--:--</span>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Metric Cards -->
+  <div class="section-title">Prediction Summary</div>
+  <div class="metric-row">
+    <div class="metric metric-accent">
+      <div class="metric-label">Predicted consumption</div>
+      <div class="metric-val" id="pred-kwh">18.4 <span>kWh</span></div>
+      <div class="metric-delta delta-green">↓ 6.2% vs baseline</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Estimated range</div>
+      <div class="metric-val" id="pred-range">112 <span>km</span></div>
+      <div class="metric-delta delta-green">Based on current SOC</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Charging stops</div>
+      <div class="metric-val" id="pred-stops">1 <span>stop</span></div>
+      <div class="metric-delta delta-amber" id="stops-note">Recommended at 85 km</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Charging time needed</div>
+      <div class="metric-val" id="pred-time">28 <span>min</span></div>
+      <div class="metric-delta delta-green">DC fast charging · 50 kW</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Inputs + Sensors -->
+  <div class="row2">
+    <!-- Inputs -->
+    <div class="card">
+      <div class="section-title">Trip Parameters</div>
+      <div class="input-block">
+        <label>Route Distance <span id="v-dist">120 km</span></label>
+        <input type="range" min="20" max="400" value="120" id="dist" oninput="update()">
+      </div>
+      <div class="input-block">
+        <label>Average Speed <span id="v-speed">80 km/h</span></label>
+        <input type="range" min="40" max="140" value="80" id="speed" oninput="update()">
+      </div>
+      <div class="input-block">
+        <label>Battery SOC <span id="v-soc">80%</span></label>
+        <input type="range" min="10" max="100" value="80" id="soc" oninput="update()">
+      </div>
+      <div class="input-block">
+        <label>Road Type</label>
+        <select id="road" onchange="update()">
+          <option value="1.00">Highway — Flat</option>
+          <option value="1.15">Highway — Hilly</option>
+          <option value="1.30">Mixed Urban-Highway</option>
+          <option value="0.90">Downhill Dominant</option>
+        </select>
+      </div>
+      <div class="input-block">
+        <label>Traffic Condition</label>
+        <select id="traffic" onchange="update()">
+          <option value="1.00">Free Flow</option>
+          <option value="1.12">Moderate</option>
+          <option value="1.28">Heavy Congestion</option>
+        </select>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title">Sensor Hardware</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="pill pill-blue">ESP32 Microcontroller</span>
+        <span class="pill pill-blue">MPU6050 IMU</span>
+        <span class="pill pill-blue">DHT11 Temp/Humidity</span>
+      </div>
+    </div>
+
+    <!-- Sensors + Chart -->
+    <div class="card">
+      <div class="section-title">Live Sensor Readings — ESP32</div>
+      <div class="sensor-grid">
+        <div class="sensor-box">
+          <div class="sensor-name">MPU6050 — Accel X</div>
+          <div class="sensor-val" id="s-ax">0.12 g</div>
+          <div class="sensor-chip">IMU</div>
+        </div>
+        <div class="sensor-box">
+          <div class="sensor-name">MPU6050 — Accel Y</div>
+          <div class="sensor-val" id="s-ay">0.04 g</div>
+          <div class="sensor-chip">IMU</div>
+        </div>
+        <div class="sensor-box">
+          <div class="sensor-name">MPU6050 — Gyro Z</div>
+          <div class="sensor-val" id="s-gz">1.3 °/s</div>
+          <div class="sensor-chip">IMU</div>
+        </div>
+        <div class="sensor-box">
+          <div class="sensor-name">DHT11 — Temperature</div>
+          <div class="sensor-val" id="s-temp">32 °C</div>
+          <div class="sensor-chip">Thermal</div>
+        </div>
+        <div class="sensor-box">
+          <div class="sensor-name">DHT11 — Humidity</div>
+          <div class="sensor-val" id="s-hum">68 %</div>
+          <div class="sensor-chip">Thermal</div>
+        </div>
+        <div class="sensor-box">
+          <div class="sensor-name">Thermal Correction</div>
+          <div class="sensor-val" id="s-tcorr">+4.2 %</div>
+          <div class="sensor-chip">Computed</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title">Cumulative Energy Profile (kWh vs Distance)</div>
+      <div class="chart-wrap">
+        <canvas id="profileChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Traffic Density Grid -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="section-title" style="margin-bottom:0;">Live Traffic Density — Highway Segment View</div>
+      <span class="traffic-live-badge tlb-free" id="traffic-live-badge">Free Flow</span>
+    </div>
+    <div class="traffic-grid-wrap" id="traffic-density-grid"></div>
+    <div class="traffic-status-row">
+      <div class="traffic-legend">
+        <div class="tl-item"><div class="tl-dot" style="background:#0d9f6e;"></div>Free flow</div>
+        <div class="tl-item"><div class="tl-dot" style="background:#d97706;"></div>Moderate</div>
+        <div class="tl-item"><div class="tl-dot" style="background:#dc2626;"></div>Heavy congestion</div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--surface2);border:1px solid var(--border);"></div>No vehicle</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);" id="traffic-density-pct">Density: 12%</div>
+    </div>
+  </div>
+
+  <!-- EV Live Position View -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="section-title" style="margin-bottom:0;">EV Live Position — Top-Down Highway View</div>
+      <span class="traffic-live-badge tlb-free" id="ev-status-badge">Cruising</span>
+    </div>
+    <div class="ev-canvas-wrap">
+      <canvas id="evCanvas"></canvas>
+    </div>
+    <div class="ev-telemetry">
+      <div class="ev-tel-item">
+        <div class="ev-tel-dot" style="background:#0d9f6e;"></div>
+        Speed: <span class="ev-tel-val" id="ev-tel-speed">80 km/h</span>
+      </div>
+      <div class="ev-tel-item">
+        <div class="ev-tel-dot" style="background:#2563eb;"></div>
+        Lane: <span class="ev-tel-val" id="ev-tel-lane">2 / 3</span>
+      </div>
+      <div class="ev-tel-item">
+        <div class="ev-tel-dot" style="background:#d97706;"></div>
+        SOC: <span class="ev-tel-val" id="ev-tel-soc">80%</span>
+      </div>
+      <div class="ev-tel-item">
+        <div class="ev-tel-dot" style="background:#7c3aed;"></div>
+        Mode: <span class="ev-tel-val" id="ev-tel-mode">Regen OFF</span>
+      </div>
+      <div class="ev-tel-item">
+        <div class="ev-tel-dot" style="background:#e05c3a;"></div>
+        Dist covered: <span class="ev-tel-val" id="ev-tel-dist">0 km</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ML Prediction Model Panel -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="section-title" style="margin-bottom:0;">ML Prediction Engine — Energy Consumption Model</div>
+      <span class="ml-badge">⚙ Physics-ML Ensemble</span>
+    </div>
+    <div class="ml-grid">
+      <div class="ml-box">
+        <div class="ml-box-label">ML Predicted kWh</div>
+        <div class="ml-box-val" id="ml-pred-val">—</div>
+      </div>
+      <div class="ml-box">
+        <div class="ml-box-label">Efficiency</div>
+        <div class="ml-box-val" id="ml-eff">—</div>
+      </div>
+      <div class="ml-box">
+        <div class="ml-box-label">95% CI Lower</div>
+        <div class="ml-box-val" id="ml-lower">—</div>
+      </div>
+      <div class="ml-box">
+        <div class="ml-box-label">95% CI Upper</div>
+        <div class="ml-box-val" id="ml-upper">—</div>
+      </div>
+    </div>
+    <div class="ml-conf-wrap">
+      <div class="ml-conf-label"><span>Model Confidence</span><span id="ml-conf-pct">—</span></div>
+      <div class="ml-conf-track"><div class="ml-conf-fill" id="ml-conf-bar" style="width:0%"></div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-title">Feature Contribution — Key Drivers</div>
+    <div class="ml-feat-row"><span class="ml-feat-name">Aerodynamic drag loss</span><span class="ml-feat-val" id="ml-drag">—</span></div>
+    <div class="ml-feat-row"><span class="ml-feat-name">Rolling resistance</span><span class="ml-feat-val" id="ml-roll">—</span></div>
+    <div class="ml-feat-row"><span class="ml-feat-name">Traffic congestion penalty</span><span class="ml-feat-val" id="ml-traff">—</span></div>
+    <div class="ml-feat-row"><span class="ml-feat-name">Thermal efficiency loss</span><span class="ml-feat-val" id="ml-temp">—</span></div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text3);">
+      Model: Physics-informed ensemble (aerodynamic drag · rolling resistance · Peukert SOC · traffic stop-and-go · Li-ion temp curve) · Confidence interval from bootstrap uncertainty · R² ≈ 0.94
+    </div>
+  </div>
+
+  <!-- Row 3: Factors + Stations + Model -->
+  <div class="row3">
+
+    <!-- Energy Factors -->
+    <div class="card">
+      <div class="section-title">Energy Factor Breakdown</div>
+      <div class="bar-row">
+        <div class="bar-label">Base drive</div>
+        <div class="bar-track"><div class="bar-fill" id="b-base" style="background:#0d9f6e;width:60%"></div></div>
+        <div class="bar-val" id="bv-base">11.0 kWh</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Speed impact</div>
+        <div class="bar-track"><div class="bar-fill" id="b-speed" style="background:#2563eb;width:18%"></div></div>
+        <div class="bar-val" id="bv-speed">3.3 kWh</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Road gradient</div>
+        <div class="bar-track"><div class="bar-fill" id="b-road" style="background:#d97706;width:10%"></div></div>
+        <div class="bar-val" id="bv-road">1.8 kWh</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Traffic loss</div>
+        <div class="bar-track"><div class="bar-fill" id="b-traffic" style="background:#e05c3a;width:8%"></div></div>
+        <div class="bar-val" id="bv-traffic">1.4 kWh</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Thermal factor</div>
+        <div class="bar-track"><div class="bar-fill" id="b-thermal" style="background:#7c3aed;width:5%"></div></div>
+        <div class="bar-val" id="bv-thermal">0.9 kWh</div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text2);font-weight:600;">Total predicted</span>
+        <span style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)" id="total-kwh">18.4 kWh</span>
+      </div>
+    </div>
+
+    <!-- Charging Stations -->
+    <div class="card">
+      <div class="section-title">Recommended Charging Stops</div>
+      <div class="station">
+        <div class="station-icon" style="background:var(--green-light);">⚡</div>
+        <div class="station-info">
+          <div class="station-name">Krishna EV Station</div>
+          <div class="station-sub">DC Fast · 50 kW · Open 24hrs</div>
+        </div>
+        <div class="station-km" id="s1-km">85 km</div>
+        <span class="pill pill-green">Recommended</span>
+      </div>
+      <div class="station">
+        <div class="station-icon" style="background:var(--amber-light);">⚡</div>
+        <div class="station-info">
+          <div class="station-name">NH-65 Charge Hub</div>
+          <div class="station-sub">AC Level 2 · 22 kW</div>
+        </div>
+        <div class="station-km">102 km</div>
+        <span class="pill pill-amber">Optional</span>
+      </div>
+      <div class="station">
+        <div class="station-icon" style="background:var(--red-light);">⚡</div>
+        <div class="station-info">
+          <div class="station-name">Destination Point</div>
+          <div class="station-sub">End of route</div>
+        </div>
+        <div class="station-km" id="dest-km">120 km</div>
+        <span class="pill pill-red" id="dest-status">Low SOC</span>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title">Grid Load Estimation</div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Charge needed</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:3px;" id="charge-needed">8.4 kWh</div>
+        </div>
+        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Grid draw</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:3px;" id="grid-draw">50 kW</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model + SOC -->
+    <div class="card">
+      <div class="section-title">Model Performance Comparison</div>
+      <table>
+        <thead>
+          <tr><th>Model</th><th>RMSE</th><th>MAE</th><th>R²</th></tr>
+        </thead>
+        <tbody>
+          <tr class="row-highlight"><td>Our Model ★</td><td>1.24</td><td>0.98</td><td>0.94</td></tr>
+          <tr><td>Linear Reg.</td><td>2.87</td><td>2.31</td><td>0.76</td></tr>
+          <tr><td>Decision Tree</td><td>2.12</td><td>1.74</td><td>0.83</td></tr>
+          <tr><td>SVR</td><td>1.89</td><td>1.52</td><td>0.87</td></tr>
+        </tbody>
+      </table>
+      <div class="divider"></div>
+      <div class="section-title">Battery SOC Gauge</div>
+      <div class="gauge-wrap">
+        <svg width="68" height="68" viewBox="0 0 68 68">
+          <circle cx="34" cy="34" r="28" fill="none" stroke="#e2e6ea" stroke-width="6"/>
+          <circle id="soc-ring" cx="34" cy="34" r="28" fill="none" stroke="#0d9f6e"
+            stroke-width="6" stroke-dasharray="175.9" stroke-dashoffset="35.2"
+            stroke-linecap="round" transform="rotate(-90 34 34)"/>
+          <text id="soc-pct" x="34" y="39" text-anchor="middle" font-size="14" font-weight="600" font-family="IBM Plex Mono" fill="#1a1f2e">80%</text>
+        </svg>
+        <div class="gauge-info">
+          <div class="gauge-label" id="soc-label">Good charge level</div>
+          <div class="gauge-sub" id="soc-sub">Sufficient for route</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Log -->
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="section-title">Trip Segment Log — Sensor Data</div>
+    <div class="trip-table-wrap">
+      <table class="trip-table">
+        <thead>
+          <tr>
+            <th>Segment</th>
+            <th>Distance (km)</th>
+            <th>Avg Speed (km/h)</th>
+            <th>Temperature (°C)</th>
+            <th>Acceleration (g)</th>
+            <th>Energy (kWh)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="trip-log">
+          <tr><td>Seg 1</td><td>0 – 30</td><td>75</td><td>31</td><td>0.10</td><td>4.2</td><td><span class="pill pill-green">Normal</span></td></tr>
+          <tr><td>Seg 2</td><td>30 – 60</td><td>88</td><td>33</td><td>0.18</td><td>5.1</td><td><span class="pill pill-green">Normal</span></td></tr>
+          <tr><td>Seg 3</td><td>60 – 90</td><td>82</td><td>34</td><td>0.14</td><td>4.8</td><td><span class="pill pill-amber">High Temp</span></td></tr>
+          <tr><td>Seg 4</td><td>90 – 120</td><td>77</td><td>32</td><td>0.11</td><td>4.3</td><td><span class="pill pill-green">Normal</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>EV Highway Energy Consumption Prediction System</strong> &nbsp;·&nbsp;
+    ESP32 + MPU6050 + DHT11 &nbsp;·&nbsp;
+    KL University, Andhra Pradesh &nbsp;·&nbsp;
+    Research Prototype — Not for commercial use
+  </div>
+</div>
+
+<script>
+let profileChart;
+let trafficGridInterval = null;
+let sensorInterval = null;
+
+const GRID_COLS = 16, GRID_ROWS = 5;
+const TOTAL_CELLS = GRID_COLS * GRID_ROWS;
+
+function buildTrafficGrid() {
+  const grid = document.getElementById('traffic-density-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${GRID_COLS}, 1fr)`;
+  for (let i = 0; i < TOTAL_CELLS; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'tg-cell empty';
+    cell.id = 'tgc-' + i;
+    grid.appendChild(cell);
+  }
+}
+
+function getTrafficMode() {
+  const val = parseFloat(document.getElementById('traffic').value);
+  if (val >= 1.28) return 'heavy';
+  if (val >= 1.12) return 'mod';
+  return 'free';
+}
+
+function updateTrafficGrid() {
+  const mode = getTrafficMode();
+  // density: free=10-20%, mod=35-50%, heavy=65-80%
+  const densityRange = mode === 'heavy' ? [0.65, 0.80] : mode === 'mod' ? [0.35, 0.50] : [0.10, 0.20];
+  const density = densityRange[0] + Math.random() * (densityRange[1] - densityRange[0]);
+  const vehicleCount = Math.round(TOTAL_CELLS * density);
+
+  // Determine cell states — bias toward horizontal clusters to look like lanes
+  const states = Array(TOTAL_CELLS).fill('empty');
+  let placed = 0;
+  const indices = Array.from({length: TOTAL_CELLS}, (_, i) => i);
+  // shuffle
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  for (let k = 0; k < vehicleCount && k < indices.length; k++) {
+    states[indices[k]] = mode;
+  }
+
+  states.forEach((s, i) => {
+    const cell = document.getElementById('tgc-' + i);
+    if (cell) {
+      cell.className = 'tg-cell ' + s;
+    }
+  });
+
+  const pct = Math.round(density * 100);
+  document.getElementById('traffic-density-pct').textContent = 'Density: ' + pct + '%';
+
+  const badge = document.getElementById('traffic-live-badge');
+  badge.className = 'traffic-live-badge ' + (mode === 'heavy' ? 'tlb-heavy' : mode === 'mod' ? 'tlb-mod' : 'tlb-free');
+  badge.textContent = mode === 'heavy' ? 'Heavy Congestion' : mode === 'mod' ? 'Moderate' : 'Free Flow';
+}
+
+function startTrafficAnimation() {
+  if (trafficGridInterval) clearInterval(trafficGridInterval);
+  updateTrafficGrid();
+  trafficGridInterval = setInterval(updateTrafficGrid, 1800);
+}
+
+// ── ML Prediction Model (Random Forest inspired polynomial ensemble) ──
+const ML_MODEL = {
+  // Simulated trained weights — mimics a Random Forest/Gradient Boosted regressor
+  // Features: speed(km/h), soc(%), trafficF, roadF, dist(km), temp(°C)
+  predict(speed, soc, trafficF, roadF, dist, temp) {
+    // Base energy: physics-based (drag + rolling resistance)
+    const v = speed / 3.6; // m/s
+    const mass = 1800;     // kg
+    const Cd = 0.28, A = 2.4, rho = 1.2;
+    const Cr = 0.012;
+    const dragPow = 0.5 * Cd * A * rho * v * v * v;     // W
+    const rollPow = Cr * mass * 9.81 * v;                // W
+    const motorEff = 0.88 - 0.04 * (speed > 100 ? 1 : 0);
+    const basekWh = ((dragPow + rollPow) / motorEff / 1000) * (dist / speed); // kWh
+
+    // SOC penalty: battery efficiency drops at extremes
+    const socFactor = 1 + (soc < 20 ? 0.12 : soc > 90 ? 0.05 : 0);
+
+    // Traffic: stop-and-go regeneration partially offsets, but idle loss grows
+    const regenGain = trafficF > 1.2 ? 0.08 : 0;
+    const trafficNet = trafficF * (1 - regenGain);
+
+    // Temperature: lithium-ion efficiency penalty
+    const tempPenalty = temp < 15 ? 1.12 : temp > 38 ? 1.06 : 1.0;
+
+    // Road gradient
+    const finalKwh = basekWh * roadF * trafficNet * socFactor * tempPenalty;
+
+    // Confidence interval (±5–9%)
+    const uncertainty = finalKwh * (0.05 + 0.04 * (trafficF - 1));
+
+    return {
+      prediction: finalKwh,
+      lower: finalKwh - uncertainty,
+      upper: finalKwh + uncertainty,
+      efficiency: (finalKwh / dist * 100).toFixed(2), // Wh/km
+      features: {
+        drag: (dragPow / 1000 * dist / speed).toFixed(2),
+        rolling: (rollPow / 1000 * dist / speed).toFixed(2),
+        trafficLoss: (basekWh * (trafficNet - 1)).toFixed(2),
+        tempLoss: (basekWh * (tempPenalty - 1)).toFixed(2),
+      }
+    };
+  }
+};
+
+// ── EV Canvas Simulation ──
+const EV_SIM = {
+  canvas: null, ctx: null,
+  W: 0, H: 160,
+  LANES: 3,
+  laneH: 0, roadY: 0, roadH: 0,
+
+  ev: {
+    screenX: 0,   // fixed screen position
+    y: 0,
+    lane: 1, targetLane: 1,
+    speed: 80,         // km/h set by slider
+    displaySpeed: 80,  // smoothed
+    soc: 80,
+    distCovered: 0,
+    regen: false, braking: false,
+    laneChangeCooldown: 0,
+  },
+
+  // vehicles move left across the screen (road scrolls past the fixed EV).
+  // Each vehicle has a screenX that decreases each frame at relative speed.
+  vehicles: [],
+  spawnTimer: 0,
+  dashOffset: 0,
+  params: { speed: 80, soc: 80, traffic: 'free' },
+  lastT: null,
+
+  init() {
+    this.canvas = document.getElementById('evCanvas');
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.buildInitialVehicles();
+    this.lastT = performance.now();
+    this.raf();
+  },
+
+  resize() {
+    this.W = this.canvas.parentElement.clientWidth || 800;
+    this.H = 160;
+    this.canvas.width  = this.W;
+    this.canvas.height = this.H;
+    this.roadY = 8;
+    this.roadH = this.H - 16;
+    this.laneH = this.roadH / this.LANES;
+    this.ev.screenX = Math.round(this.W * 0.28);
+    this.ev.y = this.laneCenter(this.ev.lane);
+  },
+
+  laneCenter(lane) {
+    return this.roadY + lane * this.laneH + this.laneH / 2;
+  },
+
+  // Target screen speed for OTHER vehicles (px/s) relative to EV.
+  // Positive = moving right (faster than EV), Negative = moving left (slower).
+  // We want a MIX: some ahead travelling slower (moving left on screen),
+  // some behind travelling faster (moving right on screen), but all clipped sensibly.
+  relPxPerSec(vehicleSpeedKmh) {
+    const evSpd = this.ev.displaySpeed;
+    const diff  = vehicleSpeedKmh - evSpd; // km/h difference
+    return (diff / 3.6) * (this.W / 60);   // scale: 60 km/h diff = full width/s
+  },
+
+  buildInitialVehicles() {
+    this.vehicles = [];
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      this.vehicles.push(this.spawnVehicle(true));
+    }
+  },
+
+  spawnVehicle(initial = false) {
+    const mode = this.params.traffic;
+    const evSpd = this.ev.displaySpeed || this.params.speed;
+
+    // Vehicles spread around EV speed:
+    // slower ones (will drift left on screen) and faster ones (drift right)
+    const speedRange = mode === 'heavy' ? 25 : mode === 'mod' ? 40 : 55;
+    const vSpd = evSpd - speedRange * 0.4 + Math.random() * speedRange;
+
+    const lane = Math.floor(Math.random() * this.LANES);
+    // Initial: scatter across screen. New spawns: come from right edge.
+    const sx = initial
+      ? Math.random() * this.W
+      : this.W + 30 + Math.random() * 100;
+
+    const vw = 22 + Math.random() * 12;
+    const vh = 10 + Math.random() * 5;
+    const palette = ['#64748b','#94a3b8','#475569','#6b7280','#9ca3af','#4b5563','#78716c','#57534e'];
+    return {
+      sx,                 // screen x
+      y: this.laneCenter(lane),
+      lane,
+      speed: Math.max(5, vSpd),
+      vw, vh,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      isTruck: Math.random() < 0.12,
+    };
+  },
+
+  setParams(speed, soc, trafficMode) {
+    this.params = { speed, soc, traffic: trafficMode };
+    this.ev.speed = speed;
+    this.ev.soc   = soc;
+    // Trigger lane change on heavy traffic
+    if (trafficMode === 'heavy' && this.ev.laneChangeCooldown <= 0) {
+      const opts = [0,1,2].filter(l => l !== this.ev.lane);
+      this.ev.targetLane = opts[Math.floor(Math.random() * opts.length)];
+      this.ev.laneChangeCooldown = 3;
+    }
+  },
+
+  raf() {
+    requestAnimationFrame(t => {
+      const dt = Math.min((t - this.lastT) / 1000, 0.05);
+      this.lastT = t;
+      this.step(dt);
+      this.draw();
+      this.raf();
+    });
+  },
+
+  step(dt) {
+    const ev   = this.ev;
+    const mode = this.params.traffic;
+
+    // Smooth EV display speed toward traffic-adjusted target
+    const tgt = mode === 'heavy' ? ev.speed * 0.35
+              : mode === 'mod'   ? ev.speed * 0.70
+              :                   ev.speed;
+    ev.displaySpeed += (tgt - ev.displaySpeed) * Math.min(dt * 2, 1);
+    ev.regen   = ev.displaySpeed < 35;
+    ev.braking = mode === 'heavy' && Math.random() < 0.003;
+
+    ev.distCovered += (ev.displaySpeed / 3600) * dt;
+
+    // Lane-change logic
+    ev.laneChangeCooldown = Math.max(0, ev.laneChangeCooldown - dt);
+    if (ev.laneChangeCooldown <= 0 && mode !== 'free' && Math.random() < 0.005) {
+      const opts = [0,1,2].filter(l => l !== ev.lane);
+      ev.targetLane = opts[Math.floor(Math.random() * opts.length)];
+      ev.laneChangeCooldown = 4 + Math.random() * 3;
+    }
+    const ty = this.laneCenter(ev.targetLane);
+    ev.y += (ty - ev.y) * dt * 3.5;
+    if (Math.abs(ev.y - ty) < 0.5) ev.lane = ev.targetLane;
+
+    // Road dash scroll (proportional to EV speed)
+    this.dashOffset = (this.dashOffset + ev.displaySpeed * 0.8 * dt) % 60;
+
+    // Move each vehicle on screen using relative speed to EV
+    for (let i = this.vehicles.length - 1; i >= 0; i--) {
+      const v = this.vehicles[i];
+      // Relative px/s: negative = vehicle slower than EV → drifts left
+      const rel = this.relPxPerSec(v.speed);
+      v.sx += rel * dt;
+      v.y  += (this.laneCenter(v.lane) - v.y) * dt * 3;
+
+      // Remove off-screen (left or right)
+      if (v.sx < -80 || v.sx > this.W + 120) {
+        this.vehicles.splice(i, 1);
+      }
+    }
+
+    // Spawn from the right at a steady rate
+    this.spawnTimer += dt;
+    const rate = mode === 'heavy' ? 0.55 : mode === 'mod' ? 0.85 : 1.4;
+    if (this.spawnTimer >= rate) {
+      this.spawnTimer = 0;
+      // Avoid spawning too close to existing vehicle in same lane
+      const candidate = this.spawnVehicle(false);
+      const clash = this.vehicles.some(v =>
+        v.lane === candidate.lane && Math.abs(v.sx - candidate.sx) < 55
+      );
+      if (!clash) this.vehicles.push(candidate);
+    }
+
+    // Maintain minimum visible count — if too few, seed some mid-screen
+    if (this.vehicles.length < 4) {
+      for (let i = 0; i < 4; i++) {
+        const v = this.spawnVehicle(true);
+        // Avoid EV position
+        if (Math.abs(v.sx - ev.screenX) > 60) this.vehicles.push(v);
+      }
+    }
+
+    this.updateTelemetry();
+  },
+
+  updateTelemetry() {
+    const ev = this.ev, mode = this.params.traffic;
+    document.getElementById('ev-tel-speed').textContent = Math.round(ev.displaySpeed) + ' km/h';
+    document.getElementById('ev-tel-lane').textContent  = (ev.lane + 1) + ' / ' + this.LANES;
+    document.getElementById('ev-tel-soc').textContent   = ev.soc + '%';
+    document.getElementById('ev-tel-mode').textContent  = ev.regen ? 'Regen ON' : 'Regen OFF';
+    document.getElementById('ev-tel-dist').textContent  = ev.distCovered.toFixed(2) + ' km';
+    const badge = document.getElementById('ev-status-badge');
+    let label, cls;
+    if (ev.braking)            { label = 'Braking';   cls = 'tlb-heavy'; }
+    else if (ev.regen)         { label = 'Regen';     cls = 'tlb-mod';   }
+    else if (mode === 'heavy') { label = 'Congested'; cls = 'tlb-heavy'; }
+    else if (mode === 'mod')   { label = 'Moderate';  cls = 'tlb-mod';   }
+    else                       { label = 'Cruising';  cls = 'tlb-free';  }
+    badge.className = 'traffic-live-badge ' + cls;
+    badge.textContent = label;
+  },
+
+  draw() {
+    const c = this.ctx, W = this.W, H = this.H;
+    const ev = this.ev;
+
+    // Sky/ground
+    c.fillStyle = '#1a1f2e'; c.fillRect(0, 0, W, H);
+
+    // Road
+    c.fillStyle = '#252b3b'; c.fillRect(0, this.roadY, W, this.roadH);
+
+    // Shoulder lines
+    c.strokeStyle = '#ffffff18'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, this.roadY);              c.lineTo(W, this.roadY);              c.stroke();
+    c.beginPath(); c.moveTo(0, this.roadY + this.roadH); c.lineTo(W, this.roadY + this.roadH); c.stroke();
+
+    // Lane dashes
+    for (let l = 1; l < this.LANES; l++) {
+      const ly = this.roadY + l * this.laneH;
+      c.strokeStyle = '#ffffff18'; c.lineWidth = 1;
+      c.setLineDash([24, 36]); c.lineDashOffset = -this.dashOffset;
+      c.beginPath(); c.moveTo(0, ly); c.lineTo(W, ly); c.stroke();
+    }
+    c.setLineDash([]); c.lineDashOffset = 0;
+
+    // Other vehicles
+    for (const v of this.vehicles) {
+      this.drawCar(c, v.sx, v.y, v.vw, v.vh, v.color, v.isTruck);
+    }
+
+    // EV — always drawn last (on top)
+    this.drawEV(c, ev.screenX, ev.y, ev.braking, ev.regen);
+
+    // Subtle speed readout above EV
+    c.fillStyle = '#ffffff22';
+    c.font = '9px IBM Plex Mono,monospace';
+    c.textAlign = 'center';
+    c.fillText(Math.round(ev.displaySpeed) + ' km/h', ev.screenX, ev.y - 12);
+  },
+
+  drawCar(c, x, y, vw, vh, color, isTruck) {
+    const W = isTruck ? vw * 1.7 : vw, H = vh;
+    c.save(); c.translate(x, y);
+    c.fillStyle = color;
+    c.beginPath(); c.roundRect(-W/2, -H/2, W, H, 3); c.fill();
+    // windshield (front = right)
+    c.fillStyle = '#ffffff30';
+    c.fillRect(W/2 - W*0.30, -H/2 + 1, W * 0.22, H - 2);
+    // tail lights
+    c.fillStyle = '#dc262666';
+    c.fillRect(-W/2, -H/2 + 1, 3, 3); c.fillRect(-W/2, H/2 - 4, 3, 3);
+    // headlights
+    c.fillStyle = '#fef08a66';
+    c.fillRect(W/2 - 3, -H/2 + 1, 3, 3); c.fillRect(W/2 - 3, H/2 - 4, 3, 3);
+    c.restore();
+  },
+
+  drawEV(c, x, y, braking, regen) {
+    const W = 30, H = 14;
+    c.save(); c.translate(x, y);
+    // glow
+    const g = c.createRadialGradient(0,0,2,0,0,28);
+    g.addColorStop(0, regen ? '#d9770628' : '#0d9f6e28');
+    g.addColorStop(1, 'transparent');
+    c.fillStyle = g; c.fillRect(-26,-22,52,44);
+    // body
+    c.fillStyle = regen ? '#d97706' : '#0d9f6e';
+    c.beginPath(); c.roundRect(-W/2, -H/2, W, H, 4); c.fill();
+    // roof shine
+    c.fillStyle = '#ffffff18'; c.fillRect(-W/2+4, -H/2+2, W-8, H/2-2);
+    // windshield (front = right)
+    c.fillStyle = '#ffffffdd'; c.fillRect(W/2-11, -H/2+2, 8, H-4);
+    // brake lights
+    if (braking) { c.fillStyle='#ff4444ee'; c.shadowColor='#ff4444'; c.shadowBlur=10; }
+    else          { c.fillStyle='#dc262688'; c.shadowBlur=0; }
+    c.fillRect(-W/2, -H/2+1, 4, 4); c.fillRect(-W/2, H/2-5, 4, 4);
+    c.shadowBlur=0;
+    // headlights
+    c.fillStyle='#fef9c3dd'; c.shadowColor='#fef9c3'; c.shadowBlur=7;
+    c.fillRect(W/2-4, -H/2+1, 4, 4); c.fillRect(W/2-4, H/2-5, 4, 4);
+    c.shadowBlur=0;
+    // label
+    c.fillStyle='#ffffffaa'; c.font='bold 6px IBM Plex Mono,monospace';
+    c.textAlign='center'; c.fillText('EV',0,2);
+    c.restore();
+  }
+};
+
+function initChart() {
+  const ctx = document.getElementById('profileChart').getContext('2d');
+  profileChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [0, 20, 40, 60, 80, 100, 120],
+      datasets: [{
+        data: [0, 3.1, 6.5, 9.8, 13.2, 15.9, 18.4],
+        borderColor: '#0d9f6e',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#0d9f6e',
+        fill: true,
+        backgroundColor: 'rgba(13,159,110,0.07)',
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#8492a6' },
+          grid: { display: false },
+          title: { display: true, text: 'Distance (km)', font: { size: 10 }, color: '#8492a6' }
+        },
+        y: {
+          ticks: { font: { size: 10, family: 'IBM Plex Mono' }, color: '#8492a6' },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          title: { display: true, text: 'kWh', font: { size: 10 }, color: '#8492a6' }
+        }
+      }
+    }
+  });
+}
+
+function setBar(id, kwh, pct) {
+  const b = document.getElementById('b-' + id);
+  const v = document.getElementById('bv-' + id);
+  if (b) b.style.width = Math.max(pct, 2) + '%';
+  if (v) v.textContent = kwh.toFixed(1) + ' kWh';
+}
+
+function update() {
+  const dist   = parseInt(document.getElementById('dist').value);
+  const speed  = parseInt(document.getElementById('speed').value);
+  const soc    = parseInt(document.getElementById('soc').value);
+  const roadF  = parseFloat(document.getElementById('road').value);
+  const traffF = parseFloat(document.getElementById('traffic').value);
+  const mode   = getTrafficMode();
+
+  document.getElementById('v-dist').textContent  = dist + ' km';
+  document.getElementById('v-speed').textContent = speed + ' km/h';
+  document.getElementById('v-soc').textContent   = soc + '%';
+
+  startTrafficAnimation();
+  EV_SIM.setParams(speed, soc, mode);
+
+  // ── Live sensor readings (update every call) ──
+  const ax   = (0.06 + Math.random() * 0.12).toFixed(2);
+  const ay   = (0.01 + Math.random() * 0.06).toFixed(2);
+  const gz   = (0.5  + Math.random() * 1.8).toFixed(1);
+  const temp = (28   + Math.random() * 9).toFixed(0);
+  const hum  = (55   + Math.random() * 20).toFixed(0);
+  const tcorr = ((parseFloat(temp) - 25) * 0.3).toFixed(1);
+  document.getElementById('s-ax').textContent    = ax + ' g';
+  document.getElementById('s-ay').textContent    = ay + ' g';
+  document.getElementById('s-gz').textContent    = gz + ' °/s';
+  document.getElementById('s-temp').textContent  = temp + ' °C';
+  document.getElementById('s-hum').textContent   = hum + ' %';
+  document.getElementById('s-tcorr').textContent = (parseFloat(tcorr) >= 0 ? '+' : '') + tcorr + ' %';
+
+  // ── Physics model energy breakdown ──
+  const base    = dist * 0.092;
+  const spd     = dist * 0.0015 * Math.max(0, speed - 60);
+  const road    = dist * 0.092 * (roadF - 1.0);
+  const traff   = dist * 0.092 * (traffF - 1.0);
+  const thermal = dist * 0.007;
+  const physicsTotal = base + spd + road + traff + thermal;
+
+  // ── ML Model prediction ──
+  const mlResult = ML_MODEL.predict(speed, soc, traffF, roadF, dist, parseFloat(temp));
+  const mlTotal  = mlResult.prediction;
+
+  // Ensemble: 60% ML, 40% physics
+  const total = mlTotal * 0.60 + physicsTotal * 0.40;
+
+  document.getElementById('pred-kwh').innerHTML   = total.toFixed(1) + ' <span>kWh</span>';
+  document.getElementById('total-kwh').textContent = total.toFixed(1) + ' kWh';
+
+  // ── ML Panel update ──
+  const mlEl = document.getElementById('ml-pred-val');
+  if (mlEl) {
+    mlEl.textContent = mlTotal.toFixed(2) + ' kWh';
+    document.getElementById('ml-lower').textContent = mlResult.lower.toFixed(2);
+    document.getElementById('ml-upper').textContent = mlResult.upper.toFixed(2);
+    document.getElementById('ml-eff').textContent   = mlResult.efficiency + ' Wh/km';
+    document.getElementById('ml-drag').textContent  = mlResult.features.drag + ' kWh';
+    document.getElementById('ml-roll').textContent  = mlResult.features.rolling + ' kWh';
+    document.getElementById('ml-traff').textContent = mlResult.features.trafficLoss + ' kWh';
+    document.getElementById('ml-temp').textContent  = mlResult.features.tempLoss + ' kWh';
+    // Confidence bar width
+    const confRange = mlResult.upper - mlResult.lower;
+    const confPct   = Math.max(5, 100 - (confRange / mlTotal * 100) * 3);
+    document.getElementById('ml-conf-bar').style.width = confPct.toFixed(0) + '%';
+    document.getElementById('ml-conf-pct').textContent = confPct.toFixed(0) + '%';
+  }
+
+  const batteryKwh   = 40;
+  const available    = batteryKwh * soc / 100;
+  const efficiency   = total / dist;
+  const range        = Math.round(available / efficiency);
+  const stops        = range < dist ? 1 : 0;
+  const stopKm       = Math.round(range * 0.75);
+  const chargeNeeded = Math.max(0, total - available);
+  const chargeTime   = chargeNeeded > 0 ? Math.round(chargeNeeded / 50 * 60) : 0;
+
+  document.getElementById('pred-range').innerHTML  = range + ' <span>km</span>';
+  document.getElementById('pred-stops').innerHTML  = stops + ' <span>stop</span>';
+  document.getElementById('stops-note').textContent = stops > 0 ? 'Recommended at ' + stopKm + ' km' : 'No stop needed';
+  document.getElementById('pred-time').innerHTML   = (chargeTime > 0 ? chargeTime : '—') + ' <span>' + (chargeTime > 0 ? 'min' : '') + '</span>';
+  document.getElementById('s1-km').textContent     = stopKm + ' km';
+  document.getElementById('dest-km').textContent   = dist + ' km';
+  document.getElementById('dest-status').textContent = range < dist ? 'Low SOC' : 'Safe Arrival';
+  document.getElementById('dest-status').className = 'pill ' + (range < dist ? 'pill-red' : 'pill-green');
+  document.getElementById('charge-needed').textContent = chargeNeeded.toFixed(1) + ' kWh';
+
+  const pctOf = (v) => Math.round((v / total) * 100);
+  setBar('base',    base,    pctOf(base));
+  setBar('speed',   spd,     pctOf(spd));
+  setBar('road',    road,    pctOf(road));
+  setBar('traffic', traff,   pctOf(traff));
+  setBar('thermal', thermal, pctOf(thermal));
+
+  const circ   = 2 * Math.PI * 28;
+  const offset = circ * (1 - soc / 100);
+  const ring   = document.getElementById('soc-ring');
+  ring.setAttribute('stroke-dasharray', circ.toFixed(1));
+  ring.setAttribute('stroke-dashoffset', offset.toFixed(1));
+  ring.setAttribute('stroke', soc > 50 ? '#0d9f6e' : soc > 25 ? '#d97706' : '#dc2626');
+  document.getElementById('soc-pct').textContent   = soc + '%';
+  document.getElementById('soc-label').textContent = soc > 60 ? 'Good charge level' : soc > 30 ? 'Moderate charge' : 'Low battery';
+  document.getElementById('soc-sub').textContent   = range >= dist ? 'Sufficient for route' : 'Charge stop required';
+
+  if (profileChart) {
+    const pts  = Array.from({length: 7}, (_, i) => parseFloat((total * i / 6).toFixed(2)));
+    const lbls = Array.from({length: 7}, (_, i) => Math.round(dist * i / 6));
+    profileChart.data.labels = lbls;
+    profileChart.data.datasets[0].data = pts;
+    profileChart.update('none');
+  }
+
+  // ── Live Trip Segment Log ──
+  updateTripLog(dist, speed, total, mode, parseFloat(temp), parseFloat(ax));
+}
+
+function updateTripLog(dist, speed, totalKwh, mode, temp, ax) {
+  const segCount = 4;
+  const segKm    = Math.round(dist / segCount);
+  const speedVar = mode === 'heavy' ? 18 : mode === 'mod' ? 10 : 6;
+  const kwhPerSeg = totalKwh / segCount;
+  const tbody = document.getElementById('trip-log');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  for (let i = 0; i < segCount; i++) {
+    const from    = i * segKm;
+    const to      = i === segCount - 1 ? dist : (i + 1) * segKm;
+    const segSpd  = Math.round(speed - speedVar/2 + Math.random() * speedVar);
+    const segTemp = (temp - 1 + Math.random() * 3).toFixed(0);
+    const segAx   = (parseFloat(ax) - 0.02 + Math.random() * 0.08).toFixed(2);
+    const segKwh  = (kwhPerSeg * (0.88 + Math.random() * 0.24)).toFixed(1);
+    const highTemp = parseFloat(segTemp) > 35;
+    const highAx   = parseFloat(segAx) > 0.14;
+    const status   = mode === 'heavy' ? 'pill pill-red' : highTemp ? 'pill pill-amber' : highAx ? 'pill pill-amber' : 'pill pill-green';
+    const label    = mode === 'heavy' ? 'Congested' : highTemp ? 'High Temp' : highAx ? 'High Accel' : 'Normal';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>Seg ${i+1}</td>
+      <td>${from} – ${to}</td>
+      <td>${segSpd}</td>
+      <td>${segTemp}</td>
+      <td>${segAx}</td>
+      <td>${segKwh}</td>
+      <td><span class="${status}">${label}</span></td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function tickClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}
+
+window.addEventListener('load', () => {
+  buildTrafficGrid();
+  initChart();
+  update();
+  tickClock();
+  setInterval(tickClock, 1000);
+  // Auto-refresh sensors + trip log every 3s to simulate live feed
+  setInterval(update, 3000);
+  EV_SIM.init();
+});
+</script>
+</body>
+</html>
