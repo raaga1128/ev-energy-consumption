@@ -63,21 +63,8 @@ https://github.com/user-attachments/assets/47522724-3b54-4d9f-bbba-923e7b79107a
 
 ***System Architecture:***
 
-IoT Sensors (MPU6050 + DHT11)
-            ↓
-        ESP32 Controller
-            ↓
-            
-   Sensor Data Processing
-            ↓
+IoT Sensors (MPU6050 + DHT11) -> ESP32 Controller -> Sensor Data Processing -> Physics + ML Prediction Engine -> EV Energy Consumption Dashboard -> Charging Recommendation System
 
-Physics + ML Prediction Engine
-            ↓
-            
- EV Energy Consumption Dashboard
-            ↓
-            
-Charging Recommendation System
 
 **The system considers:**
 Route distance
